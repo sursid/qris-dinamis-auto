@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Payment Processor</title>
+    <meta name="description" content="Secure QR code payment processing interface">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #3b82f6;
+            --surface: #ffffff;
+            --background: #f3f4f6;
+            --text: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --error: #ef4444;
+            --success: #22c55e;
+            --radius: 0.75rem;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+        }
+
+        .header h1 {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: clamp(1rem, 5vw, 2rem);
+            margin-bottom: 2rem;
+            transition: var(--transition);
+        }
+
+        .grid {
+            display: grid;
+            gap: 2rem;
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 768px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary);
+            background: #f8fafc;
+        }
+
+        .upload-zone.drag-over {
+            border-color: var(--primary);
+            background: #f0f9ff;
+            transform: scale(1.02);
+        }
+
+        .upload-zone svg {
+            margin-bottom: 1rem;
+            transition: var(--transition);
+        }
+
+        .upload-zone:hover svg {
+            transform: translateY(-5px);
+            color: var(--primary);
+        }
+
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .preview-box {
+            aspect-ratio: 1;
+            background: var(--background);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .preview-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .preview-box img.loaded {
+            opacity: 1;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: var(--transition);
+            background: var(--surface);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: var(--radius);
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .button-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .button-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .button:active {
+            transform: translateY(1px);
+        }
+
+        .button.loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .button.loading::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            animation: shimmer 1.5s infinite;
+        }
+
+        .status {
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            margin-top: 1rem;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .status.error {
+            background: #fef2f2;
+            color: var(--error);
+            border: 1px solid #fee2e2;
+        }
+
+        .status.success {
+            background: #f0fdf4;
+            color: var(--success);
+            border: 1px solid #dcfce7;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        @keyframes scale {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes confetti {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(1000px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .upload-zone.loading::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0,
+                rgba(255, 255, 255, 0.6) 50%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite linear;
+        }
+
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0;
+            border-radius: 2px;
+        }
+
+        .success-animation {
+            animation: scale 0.5s ease-in-out;
+        }
+
+        .preview-box.success {
+            position: relative;
+        }
+
+        .preview-box.success::after {
+            content: '✨';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            font-size: 2rem;
+            animation: scale 0.5s ease-in-out infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            ::before,
+            ::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>QR Payment Processor</h1>
+            <p>Upload a QR code and customize payment details</p>
+        </header>
+
+        <div class="card">
+            <div class="grid">
+                <div class="preview-container">
+                    <div id="uploadZone" class="upload-zone">
+                        <input type="file" id="qrInput" accept="image/*" hidden>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                        </svg>
+                        <p>Drop your QR code here or click to upload</p>
+                    </div>
+                    <div class="preview-box">
+                        <img id="inputQrPreview" style="display: none">
+                    </div>
+                </div>
+
+                <div class="preview-container">
+                    <div class="form-group">
+                        <label>QRIS String</label>
+                        <input type="text" id="qrisString" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount</label>
+                        <input type="number" id="amount" placeholder="Enter payment amount">
+                    </div>
+                    <button id="generateBtn" class="button button-primary">
+                        Generate Payment QR
+                    </button>
+                    <div class="preview-box">
+                        <img id="outputQrImage" style="display: none">
+                    </div>
+                </div>
+            </div>
+            <div id="status" class="status"></div>
+        </div>
+    </div>
+
+    <script>
+        const uploadZone = document.getElementById('uploadZone');
+        const qrInput = document.getElementById('qrInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const status = document.getElementById('status');
+
+        const createConfettiParticles = () => {
+            const container = document.createElement('div');
+            container.className = 'confetti-container';
+            document.body.appendChild(container);
+
+            const colors = ['#ffd700', '#ff0000', '#00ff00', '#0000ff', '#ff00ff'];
+            Array.from({ length: 50 }).forEach(() => {
+                const particle = document.createElement('div');
+                particle.className = 'confetti';
+                particle.style.cssText = `
+                    left: ${Math.random() * 100}vw;
+                    animation: confetti 1s ease-out forwards;
+                    animation-delay: ${Math.random() * 3}s;
+                    background-color: ${colors[~~(Math.random() * colors.length)]};
+                    transform: rotate(${Math.random() * 360}deg);
+                `;
+                container.appendChild(particle);
+            });
+
+            setTimeout(() => container.remove(), 5000);
+        };
+
+        const triggerSuccessAnimation = (preview) => {
+            preview.parentElement.classList.add('success');
+            preview.classList.add('success-animation');
+            createConfettiParticles();
+        };
+
+        const handleDragEvents = () => {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event =>
+                uploadZone.addEventListener(event, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false)
+            );
+
+            ['dragenter', 'dragover'].forEach(event =>
+                uploadZone.addEventListener(event, () =>
+                    uploadZone.classList.add('drag-over')
+                )
+            );
+
+            ['dragleave', 'drop'].forEach(event =>
+                uploadZone.addEventListener(event, () =>
+                    uploadZone.classList.remove('drag-over')
+                )
+            );
+        };
+
+        const showStatus = (message, type) => {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            setTimeout(() => {
+                status.style.display = 'none';
+                status.className = 'status';
+            }, 3000);
+        };
+
+        const handleDrop = (e) => handleFile(e.dataTransfer.files[0]);
+
+        const handleFile = async (file) => {
+            if (!file) return;
+
+            const preview = document.getElementById('inputQrPreview');
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+            preview.onload = () => preview.classList.add('loaded');
+
+            uploadZone.classList.add('loading');
+            const formData = new FormData();
+            formData.append('qr', file);
+
+            try {
+                generateBtn.classList.add('loading');
+                const response = await fetch('/upload-qr', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    const qrisString = document.getElementById('qrisString');
+                    qrisString.value = result.data.qrString;
+
+                    const match = result.data.qrString.match(/54(\d{2})(\d+)/);
+                    match && (document.getElementById('amount').value = match[2]);
+
+                    triggerSuccessAnimation(preview);
+                    showStatus('QR code uploaded successfully', 'success');
+                } else {
+                    showStatus(result.error || 'Failed to process QR code', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Error uploading QR code', 'error');
+            } finally {
+                uploadZone.classList.remove('loading');
+                generateBtn.classList.remove('loading');
+                URL.revokeObjectURL(preview.src);
+            }
+        };
+
+        const generateNewQR = async () => {
+            const qrString = document.getElementById('qrisString').value;
+            const amount = document.getElementById('amount').value;
+
+            if (!qrString || !amount) {
+                showStatus('Please upload QR and enter amount', 'error');
+                return;
+            }
+
+            try {
+                generateBtn.classList.add('loading');
+                const response = await fetch('/generate-qr', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    },
+                    body: JSON.stringify({ qrString, amount })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    const outputQrImage = document.getElementById('outputQrImage');
+                    outputQrImage.onload = () => {
+                        outputQrImage.style.display = 'block';
+                        outputQrImage.classList.add('loaded');
+                        triggerSuccessAnimation(outputQrImage);
+                        showStatus('QR code generated successfully', 'success');
+                    };
+                    outputQrImage.src = result.data.qrCodeImage;
+                } else {
+                    showStatus(result.error || 'Failed to generate QR code', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Error generating QR code', 'error');
+            } finally {
+                generateBtn.classList.remove('loading');
+            }
+        };
+
+        const initialize = () => {
+            handleDragEvents();
+            uploadZone.addEventListener('drop', handleDrop);
+            uploadZone.addEventListener('click', () => qrInput.click());
+            qrInput.addEventListener('change', e => e.target.files[0] && handleFile(e.target.files[0]));
+            generateBtn.addEventListener('click', generateNewQR);
+
+            document.addEventListener('paste', e => {
+                const items = e.clipboardData?.items;
+                if (!items) return;
+
+                const imageItem = Array.from(items).find(item => item.type.startsWith('image'));
+                if (imageItem) {
+                    const file = imageItem.getAsFile();
+                    handleFile(file);
+                }
+            });
+        };
+
+        initialize();
+    </script>
+</body>
+</html>
